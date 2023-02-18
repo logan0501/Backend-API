@@ -1,0 +1,54 @@
+# GET http://127.0.0.1:5000 HTTP/1.1
+
+# POST http://127.0.0.1:5000/signup-student HTTP/1.1
+# content-type: application/json
+
+# {
+# "studentName":"Loganathan",
+# "studentEmail":"loganvk@gmail.com",
+# "studentPassword":"12345678910",
+# "studentDepartment":"CSE"
+# }
+
+# POST http://127.0.0.1:5000/signup-teacher HTTP/1.1
+# content-type: application/json
+
+# {
+# "teacherName":"Loganathan",
+# "teacherEmail":"logan123456@gmail.com",
+# "teacherPassword":"12345678910",
+# "teacherDepartment":"CSE"
+# }
+
+# POST http://127.0.0.1:5000/login-student HTTP/1.1
+# content-type: application/json
+
+# {
+# "studentEmail":"logan12@gmail.com",
+# "studentPassword":"12345678910"
+# }
+
+
+# POST http://127.0.0.1:5000/login-teacher HTTP/1.1
+# content-type: application/json
+
+# {
+# "teacherEmail":"logan123456@gmail.com",
+# "teacherPassword":"12345678910"
+# }
+
+# POST http://127.0.0.1:5000/login-teacher HTTP/1.1
+# content-type: application/json
+
+# {
+# "file":"",
+# "subjectName":"Operating system",
+# "type":"Note",
+# "description":"Lorem ejfnjcd cednkjcd wdcjnwdc dsieiru cdshve fehubda ",
+# "topics":["different types of os","memory management","storage management","algorithms"],
+# "upVotes":[],
+# "downVotes":[],
+# "uId":"HSLKu9AN3XWczoVFIql7FnLYAPy2",
+# "datePublished":"20/12/2022"
+# "userType":"student"
+# }
