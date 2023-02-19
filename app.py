@@ -26,7 +26,10 @@ firestoreDb = firestore.client()
 SCOPES = ['https://www.googleapis.com/auth/drive']
 
 
+from flask_cors import CORS, cross_origin
 app = Flask(__name__)
+cors = CORS(app)
+app.config['CORS_HEADERS'] = 'Content-Type'
 
 def get_gdrive_service():
     creds = None
@@ -166,8 +169,10 @@ def uploadFile(service,temp,filename,folderId):
 @app.route("/upload-note",methods=["POST","GET"])
 def uploadNotes():
     if (request.method=='POST'):
+       
         file = request.files['file']
         uploaddata = json.loads(request.form['data'])
+        print(uploaddata)
         uId = uploaddata['uId']
         userType = uploaddata["userType"]
         temp = tempfile.NamedTemporaryFile(delete=False)
@@ -196,7 +201,7 @@ def uploadNotes():
 def noteAccept():
     if (request.method =='GET'):
         return "Thank you for accepting"
-if __name__ == "main":
+if __name__ == "__main__":
     app.run(debug=False)
 
 

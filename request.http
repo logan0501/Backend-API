@@ -10,15 +10,15 @@
 # "studentDepartment":"CSE"
 # }
 
-# POST http://127.0.0.1:5000/signup-teacher HTTP/1.1
-# content-type: application/json
+POST http://127.0.0.1:5000/signup-teacher HTTP/1.1
+content-type: application/json
 
-# {
-# "teacherName":"Loganathan",
-# "teacherEmail":"logan123456@gmail.com",
-# "teacherPassword":"12345678910",
-# "teacherDepartment":"CSE"
-# }
+{
+"teacherName":"Loganathan",
+"teacherEmail":"logan123456@gmail.com",
+"teacherPassword":"12345678910",
+"teacherDepartment":"CSE"
+}
 
 # POST http://127.0.0.1:5000/login-student HTTP/1.1
 # content-type: application/json
