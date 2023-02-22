@@ -80,9 +80,9 @@ def uploadFile(service,file=''):
                                 mimetype='application/pdf')
         # pylint: disable=maybe-no-member
         file = service.files().create(body=file_metadata, media_body=media,
-                                      fields='id').execute()
+                                      fields='id,webViewLink').execute()
 
-        print(F'File ID: {file.get("id")}')
+        print(F'File ID: {file.get("webViewLink")}')
 
     except HttpError as error:
         print(F'An error occurred: {error}')
@@ -91,4 +91,5 @@ def uploadFile(service,file=''):
     return file.get('id')
 if __name__ == '__main__':
     service = get_gdrive_service()
-    createFolder(service,"he32g23y7cewdsb")
+    uploadFile(service)
+    # createFolder(service,"he32g23y7cewdsb")

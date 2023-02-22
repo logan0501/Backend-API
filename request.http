@@ -54,11 +54,13 @@
 # }
 
 
-POST http://127.0.0.1:5000/note-accept HTTP/1.1
-content-type: application/json
+# POST http://127.0.0.1:5000/note-accept HTTP/1.1
+# content-type: application/json
 
-{
-    "voterId":"kCBXdBD1xzNaElDhxfjAVwG88Wo2",
-    "userId":"zWK7QqUwKdZXYlvzWdyF0zNso0I3",
-    "noteId":"16UDqyzPrm6VG89jd2OmPvgkmzu9_W04B"
-}
+# {
+#     "voterId":"0nXlteUZcpbZUbzi4N8cOez1Mls2",
+#     "userId":"zWK7QqUwKdZXYlvzWdyF0zNso0I3",
+#     "noteId":"1sFyXEyXxiUL-JKDAlAYsFHpmsOeb0F2m"
+# }
+
+GET http://127.0.0.1:5000/get-all-notes HTTP/1.1 

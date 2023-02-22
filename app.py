@@ -161,17 +161,17 @@ def uploadFile(service,temp,filename,folderId):
                                 mimetype='application/pdf')
         # pylint: disable=maybe-no-member
         file = service.files().create(body=file_metadata, media_body=media,
-                                      fields='id',supportsAllDrives=True).execute()
+                                      fields='webViewLink,id',supportsAllDrives=True).execute()
 
         print(F'[] File uploaded')
-        return file.get("id")
+        return [file.get('id'),file.get('webViewLink')]
     except HttpError as error:
         print(F'An error occurred: {error}')
         file = None
     os.remove(temp.name)
-    return file.get('id')
+    return [file.get('id'),file.get('webViewLink')]
 
-def sendEmail(user,file,uId,fileId,subject):
+def sendNoteVerificationEmail(user,file,uId,fileId,subject):
     print("[] Email service initiated")
     temp = tempfile.NamedTemporaryFile(delete=False)
     file.save(temp.name)
@@ -236,14 +236,17 @@ def uploadNotes():
         temp = tempfile.NamedTemporaryFile(delete=False)
         file.save(temp.name)
         doc_ref  = firestoreDb.collection(userType+'s').document(uId)
+
         if doc_ref:
             doc = doc_ref.get().to_dict()
             folderId = doc["folderId"]
-            fileId = uploadFile(service,temp,file.filename,folderId)
+            [fileId,fileLink] = uploadFile(service,temp,file.filename,folderId)
             if fileId:
                 uploaddata["isAdminApproved"]=False
                 uploaddata["fileId"]=fileId
-                dbRes = firestoreDb.collection(uId).document(fileId).set(uploaddata)
+                uploaddata["fileLink"]=fileLink
+                firestoreDb.collection(uId).document(fileId).set({"fileId":fileId,"uId":uId})
+                dbRes = firestoreDb.collection("notes").document(fileId).set(uploaddata)
                 if dbRes:
                     docs = firestoreDb.collection(u'students').stream()
                     userDict =dict()
@@ -256,7 +259,7 @@ def uploadNotes():
                             randomUsers.append(choice)
                     # print(randomUsers)
                     for user in randomUsers:
-                        sendEmail(userDict[user],file,uId,fileId,subject)
+                        sendNoteVerificationEmail(userDict[user],file,uId,fileId,subject)
                     return jsonify({"message":"File uploaded sucessfully and currently in verification phase","filedId":fileId }),200
                 else:
                     return jsonify({"error":"Error while uploading the file"}),500
@@ -268,13 +271,109 @@ def uploadNotes():
             return jsonify({"error":"Error while retreving the document from firebase"}),500
     
 
+def sendNoteVerifiedEmail(recEmail,html):
+    print("[]Verified Email Initiated")
+    EMAIL = os.getenv('EMAIL')
+    PASSWORD = os.getenv('PASSWORD')
+    fromaddr = EMAIL
+    toaddr = recEmail
+
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = "Verification of notes"
+    msg['From'] = fromaddr
+    msg['To'] = toaddr
+
+    msg.attach(MIMEText(html, 'html'))
+
+    s = smtplib.SMTP('smtp.gmail.com', 587)
+    s.starttls()
+    s.login(EMAIL, PASSWORD)
+    message = msg.as_string()
+    s.sendmail(EMAIL, toaddr, message)
+    s.quit()
+    print("[] Verified Email Sent")
+
 @app.route("/note-accept",methods=['POST','GET'])
 def noteAccept():
     if (request.method =='POST'):
         noteData = request.get_json()
-        print(noteData)
+        voterId = noteData['voterId']
+        userId = noteData['userId']
+        noteId = noteData['noteId']
+        noteData = firestoreDb.collection('notes').document(noteId).get().to_dict()
+        
+        if  "verifiedBy" in noteData:
+            if voterId in noteData["verifiedBy"]:
+                return jsonify({"error":"user trying to accept again"}),400
+            else:
+                noteData["verifiedBy"].append(voterId)
+        else:
+            noteData["verifiedBy"]=[voterId]
+        if len(noteData["verifiedBy"])==2:
+            noteData['isAdminApproved']=True
+            html = """<!DOCTYPE html>
+            <html lang="en">
+            <head></head>
+            <body>
+                <h1>Greetings from Notely</h1>
+                <p>Your notes on """+noteData['subjectName']+""" got successfully verified.</p>
+                <h4>Thank you</h4>
+                <p>Regards,</p>
+                <p>Team Notely.</p>
+            </body>
+            </html>
+            """
+            email = firestoreDb.collection('students').document(noteData['uId']).get().to_dict()['studentEmail']
+            sendNoteVerifiedEmail(email,html)
+        res = firestoreDb.collection('notes').document(noteId).update(noteData)
+        return jsonify({"message":"Verification updated"}),200
+
+@app.route("/note-reject",methods=['POST','GET'])
+def noteReject():
+    if (request.method =='POST'):
+        noteData = request.get_json()
+        voterId = noteData['voterId']
+        userId = noteData['userId']
+        noteId = noteData['noteId']
+        noteData = firestoreDb.collection('notes').document(noteId).get().to_dict()
+        
+        if  "rejectedBy" in noteData:
+            if voterId in noteData["rejectedBy"]:
+                return jsonify({"error":"user trying to reject again"}),400
+            else:
+                noteData["rejectedBy"].append(voterId)
+        else:
+            noteData["rejectedBy"]=[voterId]
+        if len(noteData["rejectedBy"])==2:
+            noteData['isAdminApproved']=False
+            html = """<!DOCTYPE html>
+            <html lang="en">
+            <head></head>
+            <body>
+                <h1>Greetings from Notely</h1>
+                <p>Your notes on """+noteData['subjectName']+""" got rejected, kindly correct it and reupload it again.</p>
+                <h4>Thank you</h4>
+                <p>Regards,</p>
+                <p>Team Notely.</p>
+            </body>
+            </html>
+            """
+            email = firestoreDb.collection('students').document(noteData['uId']).get().to_dict()['studentEmail']
+            sendNoteVerifiedEmail(email,html)
+        res = firestoreDb.collection('notes').document(noteId).update(noteData)
+        return jsonify({"message":"Verification updated"}),200
+
+
+@app.route("/get-all-notes",methods=['POST','GET'])
+def getAllNotes():
+    if request.method=='GET':
+        docs = firestoreDb.collection('notes').where(u'isAdminApproved', u'==', True).stream()
+        notesList=[]
+        for doc in docs:
+            notesList.append(doc.to_dict())
+        return jsonify({"notes":notesList}),200
 if __name__ == "__main__":
     app.run(debug=False)
 
 
-# flask run
+# flask run``
