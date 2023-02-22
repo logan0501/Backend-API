@@ -15,6 +15,12 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
 import tempfile
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
+import random
 
 load_dotenv()
 API_KEY = os.getenv('KEY')
@@ -29,7 +35,7 @@ SCOPES = ['https://www.googleapis.com/auth/drive']
 from flask_cors import CORS, cross_origin
 app = Flask(__name__)
 cors = CORS(app)
-app.config['CORS_HEADERS'] = 'Content-Type'
+
 
 def get_gdrive_service():
     creds = None
@@ -80,7 +86,6 @@ def SignUp(email,password,userData,userType):
         uid = res['localId']
         userData['uid'] = uid
         folderId = createFolder(service,uid)
-
         if folderId:
             userData['folderId']=folderId
             dbRes = firestoreDb.collection(userType+'s').document(uid).set(userData)
@@ -166,15 +171,68 @@ def uploadFile(service,temp,filename,folderId):
     os.remove(temp.name)
     return file.get('id')
 
+def sendEmail(user,file,uId,fileId,subject):
+    print("[] Email service initiated")
+    temp = tempfile.NamedTemporaryFile(delete=False)
+    file.save(temp.name)
+    EMAIL = os.getenv('EMAIL')
+    PASSWORD = os.getenv('PASSWORD')
+    fromaddr = EMAIL
+    toaddr = user['studentEmail']
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = "Verification of notes"
+    msg['From'] = fromaddr
+    msg['To'] = toaddr
+    html ="""<!DOCTYPE html>
+    <html lang="en">
+    <head></head>
+    <body>
+        <h1>Notely : Notification for verifying the notes</h1>
+        <p>
+        """+user['studentName']+""" has published a note on """+subject+""", we would like to know
+        whether the content in the note shared by them is appropriate and relavant.
+        After reviewing the attachment kindly accept or reject the notes.
+        </p>
+        <p>
+          <a href="https://notely-cit.web.app/note-accept?voterid="""+user['uid']+"""&userid="""+uId+"""&noteid="""+fileId+"""\">Click Here</a>
+          <span> to accept the note.</span>
+        </p>
+        <p>
+          <a href="https://notely-cit.web.app/note-reject?voterid="""+user['uid']+"""&userid="""+uId+"""&noteid="""+fileId+"""\">Click Here</a>
+          <span> to reject the note.</span>
+        </p>
+        <br/>
+        <h4>Thank you</h4>
+        <p>Regards,</p>
+        <p>Team Notely.</p>
+    </body>
+    </html>
+
+        """
+    msg.attach(MIMEText(html, 'html'))
+    attachment = open(temp.name, "rb")
+    p = MIMEBase('application', 'octet-stream')
+    p.set_payload((attachment).read())
+    encoders.encode_base64(p)
+    p.add_header('Content-Disposition', "attachment; filename= %s" % file.filename)
+    msg.attach(p)
+    s = smtplib.SMTP('smtp.gmail.com', 587)
+    s.starttls()
+    s.login(EMAIL,"udvgimfcrssasnlf")
+    message = msg.as_string()
+    s.sendmail(EMAIL, toaddr, message)
+    s.quit()
+    os.remove(temp.name)
+    print("[] Email sent for verification")
 @app.route("/upload-note",methods=["POST","GET"])
 def uploadNotes():
     if (request.method=='POST'):
-       
         file = request.files['file']
+ 
         uploaddata = json.loads(request.form['data'])
-        print(uploaddata)
         uId = uploaddata['uId']
         userType = uploaddata["userType"]
+        subject= uploaddata['subjectName']
         temp = tempfile.NamedTemporaryFile(delete=False)
         file.save(temp.name)
         doc_ref  = firestoreDb.collection(userType+'s').document(uId)
@@ -187,7 +245,19 @@ def uploadNotes():
                 uploaddata["fileId"]=fileId
                 dbRes = firestoreDb.collection(uId).document(fileId).set(uploaddata)
                 if dbRes:
-                    return jsonify({"message":"File uploaded sucessfully" }),200
+                    docs = firestoreDb.collection(u'students').stream()
+                    userDict =dict()
+                    for doc in docs:
+                        userDict[doc.id] = doc.to_dict()
+                    randomUsers=[]
+                    while len(randomUsers)<2:
+                        choice = random.choice( list(userDict.keys()))
+                        if choice not in randomUsers and choice!=uId:
+                            randomUsers.append(choice)
+                    # print(randomUsers)
+                    for user in randomUsers:
+                        sendEmail(userDict[user],file,uId,fileId,subject)
+                    return jsonify({"message":"File uploaded sucessfully and currently in verification phase","filedId":fileId }),200
                 else:
                     return jsonify({"error":"Error while uploading the file"}),500
             else:
@@ -196,11 +266,13 @@ def uploadNotes():
         else:
             print("[] Error while retreiving the document from firebase.")
             return jsonify({"error":"Error while retreving the document from firebase"}),500
+    
 
 @app.route("/note-accept",methods=['POST','GET'])
 def noteAccept():
-    if (request.method =='GET'):
-        return "Thank you for accepting"
+    if (request.method =='POST'):
+        noteData = request.get_json()
+        print(noteData)
 if __name__ == "__main__":
     app.run(debug=False)
 

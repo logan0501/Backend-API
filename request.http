@@ -5,20 +5,20 @@
 
 # {
 # "studentName":"Loganathan",
-# "studentEmail":"loganvk@gmail.com",
-# "studentPassword":"12345678910",
+# "studentEmail":"projectmain12345@gmail.com",
+# "studentPassword":"123456",
 # "studentDepartment":"CSE"
 # }
 
-POST http://127.0.0.1:5000/signup-teacher HTTP/1.1
-content-type: application/json
+# POST http://127.0.0.1:5000/signup-teacher HTTP/1.1
+# content-type: application/json
 
-{
-"teacherName":"Loganathan",
-"teacherEmail":"logan123456@gmail.com",
-"teacherPassword":"12345678910",
-"teacherDepartment":"CSE"
-}
+# {
+# "teacherName":"Loganathan",
+# "teacherEmail":"logan123456@gmail.com",
+# "teacherPassword":"12345678910",
+# "teacherDepartment":"CSE"
+# }
 
 # POST http://127.0.0.1:5000/login-student HTTP/1.1
 # content-type: application/json
@@ -52,3 +52,13 @@ content-type: application/json
 # "datePublished":"20/12/2022"
 # "userType":"student"
 # }
+
+
+POST http://127.0.0.1:5000/note-accept HTTP/1.1
+content-type: application/json
+
+{
+    "voterId":"kCBXdBD1xzNaElDhxfjAVwG88Wo2",
+    "userId":"zWK7QqUwKdZXYlvzWdyF0zNso0I3",
+    "noteId":"16UDqyzPrm6VG89jd2OmPvgkmzu9_W04B"
+}

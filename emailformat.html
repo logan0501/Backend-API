@@ -2,21 +2,23 @@
 <html lang="en">
   <head></head>
   <body>
-    <h1>Notely : Notification for verifying the notes</h1>
-    <p>
-      Loganathan has published a note on operating system, we would like to know
-      wether the content in the note shared by him is approriate and relavant.
-      After reviewing the attachment kindly accept or reject the notes.
-    </p>
-
-    <a href="http://localhost:5000/note-accept">Click Here</a>
-    <span> to accept the note.</span>
-    <br />
-
-    <a href="http://localhost:5000/note-reject">Click Here</a>
-    <span> to reject the note.</span>
-    <h4>Thank you</h4>
-    <p>Regards,</p>
-    <p>Team Notely.</p>
+        <h1>Notely : Notification for verifying the notes</h1>
+        <p>
+        """+user['studentName']+""" has published a note on """+subject+""", we would like to know
+        whether the content in the note shared by them is appropriate and relavant.
+        After reviewing the attachment kindly accept or reject the notes.
+        </p>
+        <p>
+          <a href="https://notely-cit.web.app/note-accept?voterid="""+user['uid']+"""&userid="""+uId+"""&noteid="""+fileId+"""\">Click Here</a>
+          <span> to accept the note.</span>
+        </p>
+        <p>
+          <a href="https://notely-cit.web.app/note-reject?voterid="""+user['uid']+"""&userid="""+uId+"""&noteid="""+fileId+"""\">Click Here</a>
+          <span> to reject the note.</span>
+        </p>
+        <br/>
+        <h4>Thank you</h4>
+        <p>Regards,</p>
+        <p>Team Notely.</p>
   </body>
 </html>
