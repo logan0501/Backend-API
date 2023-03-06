@@ -372,6 +372,20 @@ def getAllNotes():
         for doc in docs:
             notesList.append(doc.to_dict())
         return jsonify({"notes":notesList}),200
+@app.route("/update-votes",methods=['POST','GET'])
+def updateNotes():
+    if request.method == 'POST':
+        noteData = request.get_json()
+        res = firestoreDb.collection('notes').document(noteData['noteId']).set({
+            "upVotes":noteData["upVotes"],
+            "downVotes":noteData["downVotes"]
+        },merge=True)
+        print(res)
+        if (res):
+            return jsonify({"message":"Vote updated"}),200
+        else:
+            return jsonify({"message":res}),400
+        
 if __name__ == "__main__":
     app.run(debug=False)
 
