@@ -65,11 +65,11 @@
 
 # GET http://127.0.0.1:5000/get-all-notes HTTP/1.1 
 
-# POST http://127.0.0.1:5000/update-votes HTTP/1.1
-# content-type: application/json
+POST http://127.0.0.1:5000/update-votes HTTP/1.1
+content-type: application/json
 
-# {
-#     "noteId":"1PGfclHeez8pPqOL37oZqYiXPFK6H5s9w",
-#     "upVotes":[],
-#     "downVotes":["0nXlteUZcpbZUbzi4N8cOez1Mls2"]
-# }
+{
+    "noteId":"1PGfclHeez8pPqOL37oZqYiXPFK6H5s9w",
+    "downVotes":[],
+    "upVotes":[{"id":"0nXlteUZcpbZUbzi4N8cOez1Mls2","userType":"student"}]
+}
