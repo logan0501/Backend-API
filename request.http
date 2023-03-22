@@ -4,8 +4,8 @@
 # content-type: application/json
 
 # {
-# "studentName":"Loganathan",
-# "studentEmail":"projectmain12345@gmail.com",
+# "studentName":"Sethubharathi B",
+# "studentEmail":"1905113cse@cit.edu.in",
 # "studentPassword":"123456",
 # "studentDepartment":"CSE"
 # }
@@ -24,8 +24,8 @@
 # content-type: application/json
 
 # {
-# "studentEmail":"logan12@gmail.com",
-# "studentPassword":"12345678910"
+# "studentEmail":"loganvk18@gmail.com",
+# "studentPassword":"123456"
 # }
 
 
@@ -65,11 +65,20 @@
 
 # GET http://127.0.0.1:5000/get-all-notes HTTP/1.1 
 
-POST http://127.0.0.1:5000/update-votes HTTP/1.1
+# POST http://127.0.0.1:5000/update-votes HTTP/1.1
+# content-type: application/json
+
+# {
+#     "noteId":"1PGfclHeez8pPqOL37oZqYiXPFK6H5s9w",
+#     "downVotes":[],
+#     "upVotes":[{"id":"0nXlteUZcpbZUbzi4N8cOez1Mls2","userType":"student"}]
+# }
+
+POST http://127.0.0.1:5000/check-for-question-paper HTTP/1.1
 content-type: application/json
 
 {
-    "noteId":"1PGfclHeez8pPqOL37oZqYiXPFK6H5s9w",
-    "downVotes":[],
-    "upVotes":[{"id":"0nXlteUZcpbZUbzi4N8cOez1Mls2","userType":"student"}]
+    "subjectName":"Operating System",
+    "subjectCode":"19CS01",
+    "type":"midsemester"
 }

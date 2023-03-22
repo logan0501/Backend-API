@@ -228,8 +228,8 @@ def sendNoteVerificationEmail(user,file,uId,fileId,subject):
 def uploadNotes():
     if (request.method=='POST'):
         file = request.files['file']
- 
         uploaddata = json.loads(request.form['data'])
+        print(file,uploaddata)
         uId = uploaddata['uId']
         userType = uploaddata["userType"]
         subject= uploaddata['subjectName']
@@ -386,6 +386,30 @@ def updateNotes():
         else:
             return jsonify({"message":res}),400
         
+
+@app.route("/check-for-question-paper",methods=['POST','GET'])
+def checkForQuestionPaper():
+    if request.method == 'POST':
+        questionPaperData = request.get_json()
+        subjectName = questionPaperData["subjectName"]
+        subjectName = subjectName.replace(" ","").lower()
+        docs = firestoreDb.collection('questionPapers').document(subjectName).get().to_dict()
+        if docs:
+            availablePapers = docs["files"][0]
+            requestedTypePapers=[]
+            for papers in availablePapers.keys():
+                if availablePapers[papers]==questionPaperData["type"]:
+                    requestedTypePapers.append(papers)
+            reponseData = {
+                "subjectName":docs["subjectName"],
+                "subjectCode":docs["subjectCode"],
+                "files":requestedTypePapers
+            }
+            return jsonify({"data":reponseData}),200
+        else:
+            return jsonify({"message":"Data not found"}),400
+            
+
 if __name__ == "__main__":
     app.run(debug=False)
 
