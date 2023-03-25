@@ -74,16 +74,7 @@
 #     "upVotes":[{"id":"0nXlteUZcpbZUbzi4N8cOez1Mls2","userType":"student"}]
 # }
 
-# POST http://127.0.0.1:5000/check-for-question-paper HTTP/1.1
-# content-type: application/json
-
-# {
-#     "subjectName":"Operating System",
-#     "subjectCode":"19CS01",
-#     "type":"midsemester"
-# }
-
-POST http://127.0.0.1:5000/get-faq-from-available-docs HTTP/1.1
+POST http://127.0.0.1:5000/get-faq-and-papers HTTP/1.1
 content-type: application/json
 
 {

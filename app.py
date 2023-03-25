@@ -445,31 +445,6 @@ def updateNotes():
         else:
             return jsonify({"message":res}),400
         
-
-@app.route("/check-for-question-paper",methods=['POST','GET'])
-def checkForQuestionPaper():
-    if request.method == 'POST':
-        questionPaperData = request.get_json()
-        subjectName = questionPaperData["subjectName"]
-        subjectName = subjectName.replace(" ","").lower()
-        docs = firestoreDb.collection('questionPapers').document(subjectName).get().to_dict()
-        if docs:
-            availablePapers = docs["files"]
-            requestedTypePapers=[]
-            for paper in availablePapers:
-                for paperDetails in paper.values():
-                    if paperDetails['type']==questionPaperData["type"]:
-                        requestedTypePapers.append(paperDetails['link'])
-            reponseData = {
-                "subjectName":docs["subjectName"],
-                "subjectCode":docs["subjectCode"],
-                "files":requestedTypePapers
-            }
-            return jsonify({"data":reponseData,"message":"Data found"}),200
-        else:
-            return jsonify({"message":"Data not found"}),400
-            
-
 def uploadFileFromLocalFile(service,filename,folderId="1ZXN9MidQSkPIY-3OGx-nH43W77eeVfwF"):
  
     try:
@@ -574,7 +549,7 @@ def generateFAQ(subjectName,docSubName):
     print(result)
 
 
-@app.route("/get-faq-from-available-docs",methods=['POST','GET'])
+@app.route("/get-faq-and-papers",methods=['POST','GET'])
 def getFaq():
     if request.method == "POST":
         questionPaperData = request.get_json()
@@ -582,6 +557,17 @@ def getFaq():
         subjectName = subjectName.replace(" ","").lower()
         docs = firestoreDb.collection('questionPapers').document(subjectName).get().to_dict()
         if docs:
+            availablePapers = docs["files"]
+            requestedTypePapers=[]
+            for paper in availablePapers:
+                for paperDetails in paper.values():
+                    if paperDetails['type']==questionPaperData["type"]:
+                        requestedTypePapers.append(paperDetails['link'])
+            reponseData = {
+                "subjectName":docs["subjectName"],
+                "subjectCode":docs["subjectCode"],
+                "files":requestedTypePapers
+            }
             # availablePapers = docs["files"]
             # requestedPaperIds=list(availablePapers[0].keys())
             # os.mkdir("files")
@@ -589,7 +575,7 @@ def getFaq():
             #     download(id)
             # generateFAQ(docs["subjectName"],subjectName)
             if docs['faqId']:
-                return jsonify({"message":"faq found","link":docs['faqLink']}),200
+                return jsonify({"message":"faq found","faqLink":docs['faqLink'],"responseData":reponseData}),200
         else:
             return jsonify({"message":"Data not found"}),400
 
