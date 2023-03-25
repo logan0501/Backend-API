@@ -29,6 +29,7 @@ import heapq
 import ssl
 import os
 from docx import Document
+import shutil
 # try:
 #     _create_unverified_https_context = ssl._create_unverified_context
 # except AttributeError:
@@ -210,14 +211,14 @@ def LoginTeacher():
         teacherEmail = teacherData['teacherEmail']
         teacherPassword = teacherData['teacherPassword']
         return LogIn(teacherEmail,teacherPassword,'teacher')
-def uploadFile(service,temp,filename,folderId):
+def uploadFile(service,temp,filename,folderId,mimetype='application/pdf'):
  
     # 149uIJHmu2USVA0FaYkCEyTz2l3Le7AfM
     try:
 
         file_metadata = {'name': filename,"parents":[folderId]}
         media = MediaFileUpload(temp.name,
-                                mimetype='application/pdf')
+                                mimetype)
         # pylint: disable=maybe-no-member
         file = service.files().create(body=file_metadata, media_body=media,
                                       fields='webViewLink,id',supportsAllDrives=True).execute()
@@ -288,7 +289,6 @@ def uploadNotes():
     if (request.method=='POST'):
         file = request.files['file']
         uploaddata = json.loads(request.form['data'])
-        print(file,uploaddata)
         uId = uploaddata['uId']
         userType = uploaddata["userType"]
         subject= uploaddata['subjectName']
@@ -445,17 +445,20 @@ def updateNotes():
         else:
             return jsonify({"message":res}),400
         
-def uploadFileFromLocalFile(service,filename,folderId="1ZXN9MidQSkPIY-3OGx-nH43W77eeVfwF"):
- 
+def uploadFileFromLocalFile(service,filename,folderId="1ZXN9MidQSkPIY-3OGx-nH43W77eeVfwF",faqid=''):
+    file=""
     try:
 
         file_metadata = {'name': filename,"parents":[folderId]}
         media = MediaFileUpload("files/"+filename,
                                 mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
         # pylint: disable=maybe-no-member
-        file = service.files().create(body=file_metadata, media_body=media,
-                                      fields='webViewLink,id',supportsAllDrives=True).execute()
-
+        if faqid=="":
+            file = service.files().create(body=file_metadata, media_body=media,
+                                        fields='webViewLink,id',supportsAllDrives=True).execute()
+        else:
+            file = service.files().update(fileId=faqid ,body=file_metadata, media_body=media,
+                                        fields='webViewLink,id',supportsAllDrives=True).execute()
         print(F'[] File uploaded')
         return [file.get('id'),file.get('webViewLink')]
     except HttpError as error:
@@ -513,7 +516,8 @@ def getQuestionsFromText(docText):
 
     return twoMarks,fiveMarks
 
-def generateFAQ(subjectName,docSubName):
+def generateFAQ(subjectName,docSubName,faqid=''):
+    print(faqid)
     completeTwoMarkQuestions =[]
     completeFiveMarkQuestions=[]
     documentTexts=[]
@@ -540,13 +544,16 @@ def generateFAQ(subjectName,docSubName):
     faFiveMarksContent=arrayToString(faFiveMarks)
     document.add_paragraph(faFiveMarksContent)
     document.save("files/"+subjectName+".docx")
-    fileDetails = uploadFileFromLocalFile(service,subjectName+".docx")
+    fileDetails = uploadFileFromLocalFile(service,subjectName+".docx",faqid=faqid)
     doc_ref = firestoreDb.collection('questionPapers').document(docSubName)
     result = doc_ref.set({
     'faqId':fileDetails[0],
     'faqLink':fileDetails[1],
 }, merge=True)
-    print(result)
+    return {
+    'faqId':fileDetails[0],
+    'faqLink':fileDetails[1],
+}
 
 
 @app.route("/get-faq-and-papers",methods=['POST','GET'])
@@ -578,6 +585,91 @@ def getFaq():
                 return jsonify({"message":"faq found","faqLink":docs['faqLink'],"responseData":reponseData}),200
         else:
             return jsonify({"message":"Data not found"}),400
+
+def createFolderForFAQ(service,subjectName):
+    try: 
+        file_metadata = {
+            'name': subjectName,
+            'mimeType': 'application/vnd.google-apps.folder',
+            "parents":["15kx6vmuikQSjr2Ny7_7y84CEGs3zdmlX"]
+        }
+
+        file = service.files().create(body=file_metadata, fields='id'
+                                      ).execute()
+        # print(F'Folder ID: "{file.get("id")}".')
+        print("[] Folder created")
+        return file.get('id')
+
+    except HttpError as error:
+        return jsonify({"error":error }),400
+@app.route("/generate-faq",methods=['POST','GET'])
+def generateFaqFromUserGivenPapers():
+    print("hello")
+    if request.method=='POST':
+        files = request.files.getlist('file')
+        uploaddata = json.loads(request.form['data'])
+        subjectName = uploaddata["subjectName"]
+        subjectCode= uploaddata["subjectCode"]
+        type = uploaddata["type"]
+        folderId=''
+        subjectName = subjectName.replace(" ","").lower()
+        doc_ref = firestoreDb.collection('questionPapers').document(subjectName)
+        if not doc_ref.get().exists:
+            folderId = createFolderForFAQ(service,subjectName)
+            doc_ref.set({"subjectName":uploaddata["subjectName"],"subjectCode":subjectCode,"folderId":folderId})
+            newfiles={}
+            for file in files:
+                temp = tempfile.NamedTemporaryFile(delete=False)
+                file.save(temp.name)
+                id,link=uploadFile(service,temp,file.filename,folderId,'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+                newfiles[id]={'type':type,'link':link}
+            res = doc_ref.set({'files':[newfiles]},merge=True)
+            if res:
+                print("File uploaded successfully")
+            else:
+                print("error")
+        else:
+            docs = doc_ref.get().to_dict()
+            folderId=docs['folderId']
+            newfiles=docs['files'][0]
+            for file in files:
+                temp = tempfile.NamedTemporaryFile(delete=False)
+                file.save(temp.name)
+                id,link=uploadFile(service,temp,file.filename,folderId,'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+                newfiles[id]={'type':type,'link':link}
+                res = doc_ref.set({'files':[newfiles]},merge=True)
+                if res:
+                    print("File uploaded successfully")
+                else:
+                    print("error")
+        docs = firestoreDb.collection('questionPapers').document(subjectName).get().to_dict()
+        if docs:
+            availablePapers = docs["files"]
+            requestedTypePapers=[]
+            for paper in availablePapers:
+                for paperDetails in paper.values():
+                    if paperDetails['type']==type:
+                        requestedTypePapers.append(paperDetails['link'])
+            availablePapers = docs["files"]
+            faqId=''
+            if 'faqId' in docs:
+                faqId=docs['faqId']
+            requestedPaperIds=list(availablePapers[0].keys())
+            os.mkdir("files")
+            for id in requestedPaperIds:
+                download(id)
+            result = generateFAQ(docs["subjectName"],subjectName,faqId)
+            reponseData = {
+                "subjectName":docs["subjectName"],
+                "subjectCode":docs["subjectCode"],
+                "files":requestedTypePapers
+            }
+            shutil.rmtree('files')
+            if result['faqId']:
+                return jsonify({"message":"faq found","faqLink":result['faqLink'],"responseData":reponseData}),200
+        else:
+            return jsonify({"message":"Data not found"}),400
+            
 
 
 if __name__ == "__main__":
