@@ -20,7 +20,24 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
-import random
+import re
+from tqdm import tqdm
+import docx2txt
+from nltk import word_tokenize
+import nltk
+import heapq
+import ssl
+import os
+from docx import Document
+# try:
+#     _create_unverified_https_context = ssl._create_unverified_context
+# except AttributeError:
+#     pass
+# else:
+#     ssl._create_default_https_context = _create_unverified_https_context
+
+# nltk.download('punkt')
+# nltk.download('stopwords')
 
 load_dotenv()
 API_KEY = os.getenv('KEY')
@@ -110,10 +127,9 @@ def download_file_from_google_drive(id, destination):
         params = {'id': id, 'confirm':token}
         response = session.get(URL, params=params, stream=True)
     save_response_content(response, destination)  
-def download():
+def download(file_id):
     service = get_gdrive_service()
-    filename = "files/paper1.docx"
-    file_id="1qomyI0Mm30zJbW1NlP5gl2bfwk3C2JlQ"
+    filename = "files/"+file_id+".docx"
     service.permissions().create(body={"role": "reader", "type": "anyone"}, fileId=file_id).execute()
     download_file_from_google_drive(file_id, filename)
 
@@ -454,6 +470,109 @@ def checkForQuestionPaper():
             return jsonify({"message":"Data not found"}),400
             
 
+def uploadFileFromLocalFile(service,filename,folderId="1ZXN9MidQSkPIY-3OGx-nH43W77eeVfwF"):
+ 
+    try:
+
+        file_metadata = {'name': filename,"parents":[folderId]}
+        media = MediaFileUpload("files/"+filename,
+                                mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+        # pylint: disable=maybe-no-member
+        file = service.files().create(body=file_metadata, media_body=media,
+                                      fields='webViewLink,id',supportsAllDrives=True).execute()
+
+        print(F'[] File uploaded')
+        return [file.get('id'),file.get('webViewLink')]
+    except HttpError as error:
+        print(F'An error occurred: {error}')
+        file = None
+    return [file.get('id'),file.get('webViewLink')]
+def generate(completeQuestions):
+    tokenized_words = []
+    for sent in completeQuestions:
+        tokenized_words.extend(word_tokenize(sent))
+    stopwords = nltk.corpus.stopwords.words('english')
+    word_frequencies = {}
+    for word in tokenized_words:
+        if word not in stopwords:
+            if word not in word_frequencies.keys():
+                word_frequencies[word] = 1
+            else:
+                word_frequencies[word] += 1
+    maximum_frequncy = max(word_frequencies.values())
+
+    for word in word_frequencies.keys():
+        word_frequencies[word] = (word_frequencies[word]/maximum_frequncy)
+
+    sentence_scores = {}
+
+    for sent in completeQuestions:
+        for word in nltk.word_tokenize(sent.lower()):
+            if word in word_frequencies.keys():
+                if len(sent.split(' ')) < 30:
+                    if sent not in sentence_scores.keys():
+                        sentence_scores[sent] = word_frequencies[word]
+                    else:
+                        sentence_scores[sent] += word_frequencies[word]
+    summary_sentences = heapq.nlargest(10, sentence_scores, key=sentence_scores.get)
+
+    return summary_sentences
+def getQuestionsFromText(docText):
+    docText=docText.split("\n")
+    twoMarks=[]
+    fiveMarks=[]
+    visited11marks=False
+    for sentence in docText:
+        newSentence = sentence.strip().lower()
+        if len(newSentence)!=0:
+            if (newSentence!='2 marks' and newSentence!='11 marks'):
+                if not visited11marks:
+                    newSentence = newSentence[newSentence.find(".",0,3)+2:]
+                    twoMarks.append(newSentence)
+                else:
+                    newSentence = newSentence[newSentence.find(".",0,3)+2:]
+                    fiveMarks.append(newSentence)
+            if (newSentence=='11 marks'):
+                visited11marks=True
+
+
+    return twoMarks,fiveMarks
+
+def generateFAQ(subjectName,docSubName):
+    completeTwoMarkQuestions =[]
+    completeFiveMarkQuestions=[]
+    documentTexts=[]
+    for file in os.listdir("files"):
+        if file.endswith(".docx"):
+            documentTexts.append(docx2txt.process("./files/"+file))
+    for documentText in documentTexts:
+        twoMarks,fiveMarks = getQuestionsFromText(documentText)
+        completeTwoMarkQuestions.extend(twoMarks)
+        completeFiveMarkQuestions.extend(fiveMarks)
+    faTwoMarks = generate(completeTwoMarkQuestions)
+    faFiveMarks = generate(completeFiveMarkQuestions)
+    document = Document()
+    document.add_heading(subjectName)
+    document.add_paragraph('2 Marks')
+    def arrayToString(arr):
+        string=''
+        for i in range(len(arr)):
+            string+=str(i+1)+". "+arr[i].capitalize()+"\n"
+        return string
+    faTwoMarksContent=arrayToString(faTwoMarks)
+    document.add_paragraph(faTwoMarksContent)
+    document.add_paragraph('11 Marks')
+    faFiveMarksContent=arrayToString(faFiveMarks)
+    document.add_paragraph(faFiveMarksContent)
+    document.save("files/"+subjectName+".docx")
+    fileDetails = uploadFileFromLocalFile(service,subjectName+".docx")
+    doc_ref = firestoreDb.collection('questionPapers').document(docSubName)
+    result = doc_ref.set({
+    'faqId':fileDetails[0],
+    'faqLink':fileDetails[1],
+}, merge=True)
+    print(result)
+
 
 @app.route("/get-faq-from-available-docs",methods=['POST','GET'])
 def getFaq():
@@ -462,7 +581,17 @@ def getFaq():
         subjectName = questionPaperData["subjectName"]
         subjectName = subjectName.replace(" ","").lower()
         docs = firestoreDb.collection('questionPapers').document(subjectName).get().to_dict()
-        print(docs)
+        if docs:
+            # availablePapers = docs["files"]
+            # requestedPaperIds=list(availablePapers[0].keys())
+            # os.mkdir("files")
+            # for id in requestedPaperIds:
+            #     download(id)
+            # generateFAQ(docs["subjectName"],subjectName)
+            if docs['faqId']:
+                return jsonify({"message":"faq found","link":docs['faqLink']}),200
+        else:
+            return jsonify({"message":"Data not found"}),400
 
 
 if __name__ == "__main__":
