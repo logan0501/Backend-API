@@ -82,3 +82,12 @@ content-type: application/json
     "subjectCode":"19CS01",
     "type":"midsemester"
 }
+
+# POST http://127.0.0.1:5000/get-faq-from-available-docs HTTP/1.1
+# content-type: application/json
+
+# {
+#     "subjectName":"Operating System",
+#     "subjectCode":"19CS01",
+#     "type":"midsemester"
+# }

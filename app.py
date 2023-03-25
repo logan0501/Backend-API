@@ -75,6 +75,49 @@ def createFolder(service,uid):
 
     except HttpError as error:
         return jsonify({"error":error }),400
+def download_file_from_google_drive(id, destination):
+    def get_confirm_token(response):
+        for key, value in response.cookies.items():
+            if key.startswith('download_warning'):
+                return value
+        return None
+
+    def save_response_content(response, destination):
+        CHUNK_SIZE = 32768
+        # get the file size from Content-length response header
+        file_size = int(response.headers.get("Content-Length", 0))
+        # extract Content disposition from response headers
+        content_disposition = response.headers.get("content-disposition")
+        # parse filename
+        filename = re.findall("filename=\"(.+)\"", content_disposition)[0]
+        print("[+] File size:", file_size)
+        print("[+] File name:", filename)
+        progress = tqdm(response.iter_content(CHUNK_SIZE), f"Downloading {filename}", total=file_size, unit="Byte", unit_scale=True, unit_divisor=1024)
+        with open(destination, "wb") as f:
+            for chunk in progress:
+                if chunk: # filter out keep-alive new chunks
+                    f.write(chunk)
+                    # update the progress bar
+                    progress.update(len(chunk))
+        progress.close()
+
+    URL = "https://docs.google.com/uc?export=download"
+    session = requests.Session()
+    response = session.get(URL, params = {'id': id}, stream=True)
+    print("[+] Downloading", response.url)
+    token = get_confirm_token(response)
+    if token:
+        params = {'id': id, 'confirm':token}
+        response = session.get(URL, params=params, stream=True)
+    save_response_content(response, destination)  
+def download():
+    service = get_gdrive_service()
+    filename = "files/paper1.docx"
+    file_id="1qomyI0Mm30zJbW1NlP5gl2bfwk3C2JlQ"
+    service.permissions().create(body={"role": "reader", "type": "anyone"}, fileId=file_id).execute()
+    download_file_from_google_drive(file_id, filename)
+
+
 
 def SignUp(email,password,userData,userType):
     signUpUrl = "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key="+API_KEY
@@ -395,20 +438,32 @@ def checkForQuestionPaper():
         subjectName = subjectName.replace(" ","").lower()
         docs = firestoreDb.collection('questionPapers').document(subjectName).get().to_dict()
         if docs:
-            availablePapers = docs["files"][0]
+            availablePapers = docs["files"]
             requestedTypePapers=[]
-            for papers in availablePapers.keys():
-                if availablePapers[papers]==questionPaperData["type"]:
-                    requestedTypePapers.append(papers)
+            for paper in availablePapers:
+                for paperDetails in paper.values():
+                    if paperDetails['type']==questionPaperData["type"]:
+                        requestedTypePapers.append(paperDetails['link'])
             reponseData = {
                 "subjectName":docs["subjectName"],
                 "subjectCode":docs["subjectCode"],
                 "files":requestedTypePapers
             }
-            return jsonify({"data":reponseData}),200
+            return jsonify({"data":reponseData,"message":"Data found"}),200
         else:
             return jsonify({"message":"Data not found"}),400
             
+
+
+@app.route("/get-faq-from-available-docs",methods=['POST','GET'])
+def getFaq():
+    if request.method == "POST":
+        questionPaperData = request.get_json()
+        subjectName = questionPaperData["subjectName"]
+        subjectName = subjectName.replace(" ","").lower()
+        docs = firestoreDb.collection('questionPapers').document(subjectName).get().to_dict()
+        print(docs)
+
 
 if __name__ == "__main__":
     app.run(debug=False)

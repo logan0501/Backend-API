@@ -1,26 +1,64 @@
-from __future__ import print_function
-
-import os.path
-
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
+import pickle
+import os
+import re
+import io
 from googleapiclient.discovery import build
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
+import requests
+from tqdm import tqdm
+from google.oauth2.credentials import Credentials
 from googleapiclient.errors import HttpError
-from googleapiclient.http import MediaFileUpload
 
-# If modifying these scopes, delete the file token.json.
+# If modifying these scopes, delete the file token.pickle.
 SCOPES = ['https://www.googleapis.com/auth/drive']
 
+def download_file_from_google_drive(id, destination):
+    def get_confirm_token(response):
+        for key, value in response.cookies.items():
+            if key.startswith('download_warning'):
+                return value
+        return None
+
+    def save_response_content(response, destination):
+        CHUNK_SIZE = 32768
+        # get the file size from Content-length response header
+        file_size = int(response.headers.get("Content-Length", 0))
+        # extract Content disposition from response headers
+        content_disposition = response.headers.get("content-disposition")
+        # parse filename
+        filename = re.findall("filename=\"(.+)\"", content_disposition)[0]
+        print("[+] File size:", file_size)
+        print("[+] File name:", filename)
+        progress = tqdm(response.iter_content(CHUNK_SIZE), f"Downloading {filename}", total=file_size, unit="Byte", unit_scale=True, unit_divisor=1024)
+        with open(destination, "wb") as f:
+            for chunk in progress:
+                if chunk: # filter out keep-alive new chunks
+                    f.write(chunk)
+                    # update the progress bar
+                    progress.update(len(chunk))
+        progress.close()
+
+    # base URL for download
+    URL = "https://docs.google.com/uc?export=download"
+    # init a HTTP session
+    session = requests.Session()
+    # make a request
+    response = session.get(URL, params = {'id': id}, stream=True)
+    print("[+] Downloading", response.url)
+    # get confirmation token
+    token = get_confirm_token(response)
+    if token:
+        params = {'id': id, 'confirm':token}
+        response = session.get(URL, params=params, stream=True)
+    # download to disk
+    save_response_content(response, destination)  
 
 def get_gdrive_service():
     creds = None
-    # The file token.json stores the user's access and refresh tokens, and is
-    # created automatically when the authorization flow completes for the first
-    # time.
     if os.path.exists('token.json'):
         creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-    # If there are no (valid) credentials available, let the user log in.
+
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
@@ -28,68 +66,21 @@ def get_gdrive_service():
             flow = InstalledAppFlow.from_client_secrets_file(
                 'credentials.json', SCOPES)
             creds = flow.run_local_server(port=0)
-        # Save the credentials for the next run
         with open('token.json', 'w') as token:
             token.write(creds.to_json())
 
     try:
         return build('drive', 'v3', credentials=creds)
-
-        # # Call the Drive v3 API
-        # results = service.files().list(
-        #     pageSize=10, fields="nextPageToken, files(id, name)").execute()
-        # items = results.get('files', [])
-
-        # if not items:
-        #     print('No files found.')
-        #     return
-        # print('Files:')
-        # for item in items:
-        #     print(u'{0} ({1})'.format(item['name'], item['id']))
     except HttpError as error:
         # TODO(developer) - Handle errors from drive API.
         print(f'An error occurred: {error}')
+service = get_gdrive_service()
 
-def createFolder(service,uid):
-    try:
-        # create drive api client
-        
-        file_metadata = {
-            'name': uid,
-            'mimeType': 'application/vnd.google-apps.folder',
-            "parents":["149uIJHmu2USVA0FaYkCEyTz2l3Le7AfM"]
-        }
-
-        # pylint: disable=maybe-no-member
-        file = service.files().create(body=file_metadata, fields='id'
-                                      ).execute()
-        print(F'Folder ID: "{file.get("id")}".')
-        return file.get('id')
-
-    except HttpError as error:
-        print(F'An error occurred: {error}')
-        return None
-
-def uploadFile(service,file=''):
-    # 149uIJHmu2USVA0FaYkCEyTz2l3Le7AfM
-    try:
-
-
-        file_metadata = {'name': 'temp.pdf',"parents":["149uIJHmu2USVA0FaYkCEyTz2l3Le7AfM"]}
-        media = MediaFileUpload('temp.pdf',
-                                mimetype='application/pdf')
-        # pylint: disable=maybe-no-member
-        file = service.files().create(body=file_metadata, media_body=media,
-                                      fields='id,webViewLink').execute()
-
-        print(F'File ID: {file.get("webViewLink")}')
-
-    except HttpError as error:
-        print(F'An error occurred: {error}')
-        file = None
-
-    return file.get('id')
-if __name__ == '__main__':
+def download():
     service = get_gdrive_service()
-    uploadFile(service)
-    # createFolder(service,"he32g23y7cewdsb")
+    filename = "files/paper1.docx"
+    file_id="1qomyI0Mm30zJbW1NlP5gl2bfwk3C2JlQ"
+    service.permissions().create(body={"role": "reader", "type": "anyone"}, fileId=file_id).execute()
+    download_file_from_google_drive(file_id, filename)
+
+download()
