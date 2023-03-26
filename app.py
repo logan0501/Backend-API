@@ -581,8 +581,10 @@ def getFaq():
             # for id in requestedPaperIds:
             #     download(id)
             # generateFAQ(docs["subjectName"],subjectName)
-            if docs['faqId']:
+            if 'faqId' in docs:
                 return jsonify({"message":"faq found","faqLink":docs['faqLink'],"responseData":reponseData}),200
+            else:
+                return jsonify({"message":"Data not found"}),400
         else:
             return jsonify({"message":"Data not found"}),400
 
@@ -599,9 +601,9 @@ def createFolderForFAQ(service,subjectName):
         # print(F'Folder ID: "{file.get("id")}".')
         print("[] Folder created")
         return file.get('id')
-
     except HttpError as error:
         return jsonify({"error":error }),400
+    
 @app.route("/generate-faq",methods=['POST','GET'])
 def generateFaqFromUserGivenPapers():
     print("hello")
@@ -665,8 +667,10 @@ def generateFaqFromUserGivenPapers():
                 "files":requestedTypePapers
             }
             shutil.rmtree('files')
-            if result['faqId']:
+            if 'faqId' in result:
                 return jsonify({"message":"faq found","faqLink":result['faqLink'],"responseData":reponseData}),200
+            else:
+                return jsonify({"message":"Data not found"}),400
         else:
             return jsonify({"message":"Data not found"}),400
             

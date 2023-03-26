@@ -78,7 +78,7 @@ POST http://127.0.0.1:5000/get-faq-and-papers HTTP/1.1
 content-type: application/json
 
 {
-    "subjectName":"Operating System",
+    "subjectName":"operating system",
     "subjectCode":"19CS01",
     "type":"midsemester"
 }
