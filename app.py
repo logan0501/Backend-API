@@ -436,6 +436,42 @@ def getAllNotes():
         for doc in docs:
             notesList.append(doc.to_dict())
         return jsonify({"notes":notesList}),200
+    
+@app.route("/get-all-notes-admin",methods=['POST',"GET"])
+def getAllNotesAdmin():
+    if request.method=='GET':
+        docs = firestoreDb.collection('notes').stream()
+        notesList=[]
+        for doc in docs:
+            dictionary = doc.to_dict()
+            if 'downVotes' in dictionary and 'upVotes' in dictionary:
+                if len(dictionary['downVotes'])-len(dictionary['upVotes'])>=3:
+                    notesList.append(doc.to_dict())
+        return jsonify({"notes":notesList}),200    
+    
+@app.route("/update-note-admin",methods=['POST',"GET"])
+def updateNoteAdmin():
+    if request.method=='POST':
+        noteData = request.get_json()
+        type = noteData['type']
+        noteId = noteData['noteId']
+        if type=="accept":
+            res = firestoreDb.collection('notes').document(noteId).set({
+                'downVotes':[]
+            },merge=True)
+            if res:
+                return jsonify({"message":"Note accepted successfully"}),200
+            else:
+                return jsonify({"message":"Note not found"}),400
+        elif type=="reject":
+            res = firestoreDb.collection('notes').document(noteId).delete()
+            if res:
+                return jsonify({"message":"Note removed from database successfully"}),200
+            else:
+                return jsonify({"message":"Error while deleting the note"}),400
+        else:
+            return jsonify({"message":"Response note found"}),400
+
 @app.route("/update-votes",methods=['POST','GET'])
 def updateNotes():
     if request.method == 'POST':

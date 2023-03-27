@@ -39,13 +39,13 @@
 # }
 
 # Teacher
-POST http://127.0.0.1:5000/login-teacher HTTP/1.1
-content-type: application/json
+# POST http://127.0.0.1:5000/login-teacher HTTP/1.1
+# content-type: application/json
 
-{
-"teacherEmail":"logan123456@gmail.com",
-"teacherPassword":"12345678910"
-}
+# {
+# "teacherEmail":"logan123456@gmail.com",
+# "teacherPassword":"12345678910"
+# }
 
 # POST http://127.0.0.1:5000/login-teacher HTTP/1.1
 # content-type: application/json
@@ -82,6 +82,26 @@ content-type: application/json
 #     "noteId":"1PGfclHeez8pPqOL37oZqYiXPFK6H5s9w",
 #     "downVotes":[],
 #     "upVotes":[{"id":"0nXlteUZcpbZUbzi4N8cOez1Mls2","userType":"student"}]
+# }
+
+# GET http://127.0.0.1:5000//get-all-notes-admin HTTP/1.1 
+
+POST http://127.0.0.1:5000/update-note-admin HTTP/1.1
+content-type: application/json
+
+{
+    "noteId":"1507LOULfuCVTFOeHRP1OgWimwquctjud",
+    "type":"reject"
+}
+
+
+# POST http://127.0.0.1:5000/update-votes HTTP/1.1
+# content-type: application/json
+
+# {
+#     "noteId":"1sFyXEyXxiUL-JKDAlAYsFHpmsOeb0F2m",
+#     "downVotes":[{"id":"0nXlteUZcpbZUbzi4N8cOez1Mls2","userType":"student"}],
+#     "upVotes":[]
 # }
 
 # POST http://127.0.0.1:5000/get-faq-and-papers HTTP/1.1
