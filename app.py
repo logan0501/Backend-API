@@ -169,9 +169,12 @@ def LogIn(email,passoword,userType):
         doc = doc_ref.get()
         if doc.exists:
             print("[] "+userType+" data found")
-            return jsonify({"data":{userType:res},"message":userType+" data found"}),200
+            isAdmin = False
+            if 'isAdmin' in doc.to_dict():
+                isAdmin=True
+            return jsonify({"data":{userType:res},"isAdmin":isAdmin,"message":userType+" data found"}),200
         else:
-            print("[] user trying to cheat");
+            print("[] user trying to cheat")
             return jsonify({"error":"Access denied for the user"}),400
     if("error" in res):
         print("[] Error occured")
@@ -211,6 +214,8 @@ def LoginTeacher():
         teacherEmail = teacherData['teacherEmail']
         teacherPassword = teacherData['teacherPassword']
         return LogIn(teacherEmail,teacherPassword,'teacher')
+     
+
 def uploadFile(service,temp,filename,folderId,mimetype='application/pdf'):
  
     # 149uIJHmu2USVA0FaYkCEyTz2l3Le7AfM
@@ -606,7 +611,6 @@ def createFolderForFAQ(service,subjectName):
     
 @app.route("/generate-faq",methods=['POST','GET'])
 def generateFaqFromUserGivenPapers():
-    print("hello")
     if request.method=='POST':
         files = request.files.getlist('file')
         uploaddata = json.loads(request.form['data'])

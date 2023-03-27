@@ -14,10 +14,11 @@
 # content-type: application/json
 
 # {
-# "teacherName":"Loganathan",
-# "teacherEmail":"logan123456@gmail.com",
-# "teacherPassword":"12345678910",
-# "teacherDepartment":"CSE"
+# "teacherName":"Admin",
+# "teacherEmail":"admin@gmail.com",
+# "teacherPassword":"123456",
+# "teacherDepartment":"-",
+# "isAdmin":true
 # }
 
 # POST http://127.0.0.1:5000/login-student HTTP/1.1
@@ -28,14 +29,23 @@
 # "studentPassword":"123456"
 # }
 
-
+# Admin
 # POST http://127.0.0.1:5000/login-teacher HTTP/1.1
 # content-type: application/json
 
 # {
-# "teacherEmail":"logan123456@gmail.com",
-# "teacherPassword":"12345678910"
+# "teacherEmail":"admin@gmail.com",
+# "teacherPassword":"123456"
 # }
+
+# Teacher
+POST http://127.0.0.1:5000/login-teacher HTTP/1.1
+content-type: application/json
+
+{
+"teacherEmail":"logan123456@gmail.com",
+"teacherPassword":"12345678910"
+}
 
 # POST http://127.0.0.1:5000/login-teacher HTTP/1.1
 # content-type: application/json
@@ -74,11 +84,11 @@
 #     "upVotes":[{"id":"0nXlteUZcpbZUbzi4N8cOez1Mls2","userType":"student"}]
 # }
 
-POST http://127.0.0.1:5000/get-faq-and-papers HTTP/1.1
-content-type: application/json
+# POST http://127.0.0.1:5000/get-faq-and-papers HTTP/1.1
+# content-type: application/json
 
-{
-    "subjectName":"operating system",
-    "subjectCode":"19CS01",
-    "type":"midsemester"
-}
+# {
+#     "subjectName":"operating system",
+#     "subjectCode":"19CS01",
+#     "type":"midsemester"
+# }
