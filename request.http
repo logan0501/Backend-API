@@ -73,7 +73,7 @@
 #     "noteId":"1sFyXEyXxiUL-JKDAlAYsFHpmsOeb0F2m"
 # }
 
-# GET http://127.0.0.1:5000/get-all-notes HTTP/1.1 
+GET http://127.0.0.1:8001/get-all-notes HTTP/1.1 
 
 # POST http://127.0.0.1:5000/update-votes HTTP/1.1
 # content-type: application/json
@@ -86,13 +86,13 @@
 
 # GET http://127.0.0.1:5000//get-all-notes-admin HTTP/1.1 
 
-POST http://127.0.0.1:5000/update-note-admin HTTP/1.1
-content-type: application/json
+# POST http://127.0.0.1:5000/update-note-admin HTTP/1.1
+# content-type: application/json
 
-{
-    "noteId":"1507LOULfuCVTFOeHRP1OgWimwquctjud",
-    "type":"reject"
-}
+# {
+#     "noteId":"1507LOULfuCVTFOeHRP1OgWimwquctjud",
+#     "type":"reject"
+# }
 
 
 # POST http://127.0.0.1:5000/update-votes HTTP/1.1
@@ -111,4 +111,4 @@ content-type: application/json
 #     "subjectName":"operating system",
 #     "subjectCode":"19CS01",
 #     "type":"midsemester"
-# }
+}

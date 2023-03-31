@@ -30,6 +30,7 @@ import ssl
 import os
 from docx import Document
 import shutil
+import random
 # try:
 #     _create_unverified_https_context = ssl._create_unverified_context
 # except AttributeError:
@@ -309,6 +310,8 @@ def uploadNotes():
                 uploaddata["isAdminApproved"]=False
                 uploaddata["fileId"]=fileId
                 uploaddata["fileLink"]=fileLink
+                uploaddata["upVotes"]=[]
+                uploaddata["downVotes"]=[]
                 firestoreDb.collection(uId).document(fileId).set({"fileId":fileId,"uId":uId})
                 dbRes = firestoreDb.collection("notes").document(fileId).set(uploaddata)
                 if dbRes:
@@ -518,6 +521,7 @@ def generate(completeQuestions):
                 word_frequencies[word] = 1
             else:
                 word_frequencies[word] += 1
+    print(word_frequencies)
     maximum_frequncy = max(word_frequencies.values())
 
     for word in word_frequencies.keys():
@@ -534,7 +538,6 @@ def generate(completeQuestions):
                     else:
                         sentence_scores[sent] += word_frequencies[word]
     summary_sentences = heapq.nlargest(len(completeQuestions)//2, sentence_scores, key=sentence_scores.get)
-
     return summary_sentences
 def getQuestionsFromText(docText):
     docText=docText.split("\n")
@@ -546,19 +549,32 @@ def getQuestionsFromText(docText):
         if len(newSentence)!=0:
             if (newSentence!='2 marks' and newSentence!='11 marks'):
                 if not visited11marks:
-                    newSentence = newSentence[newSentence.find(".",0,3)+2:]
-                    twoMarks.append(newSentence)
+                    if (newSentence.find(".",0,3)!=-1):
+                        newSentence = newSentence[newSentence.find(".",0,3)+2:]
+                        if newSentence[-1]==".":
+                            newSentence = newSentence[:-1]
+                        twoMarks.append(newSentence)
+                    else:
+                        if newSentence[-1]==".":
+                            newSentence = newSentence[:-1]
+                        twoMarks.append(newSentence)
                 else:
-                    newSentence = newSentence[newSentence.find(".",0,3)+2:]
-                    fiveMarks.append(newSentence)
+                    if (newSentence.find(".",0,3)!=-1):
+                        newSentence = newSentence[newSentence.find(".",0,3)+2:]
+                        if newSentence[-1]==".":
+                            newSentence = newSentence[:-1]
+                        fiveMarks.append(newSentence)
+                    else:
+                        if newSentence[-1]==".":
+                            newSentence = newSentence[:-1]
+                        twoMarks.append(newSentence)
             if (newSentence=='11 marks'):
                 visited11marks=True
-
 
     return twoMarks,fiveMarks
 
 def generateFAQ(subjectName,docSubName,faqid=''):
-    print(faqid)
+  
     completeTwoMarkQuestions =[]
     completeFiveMarkQuestions=[]
     documentTexts=[]
@@ -717,7 +733,7 @@ def generateFaqFromUserGivenPapers():
 
 
 if __name__ == "__main__":
-    app.run(debug=False)
+    app.run(debug=False,port=8001)
 
 
 # flask run``
