@@ -1,6 +1,6 @@
 # GET http://127.0.0.1:5000 HTTP/1.1
 
-# POST http://127.0.0.1:5000/signup-student HTTP/1.1
+# POST http://127.0.0.1:8001/signup-student HTTP/1.1
 # content-type: application/json
 
 # {
@@ -10,18 +10,18 @@
 # "studentDepartment":"CSE"
 # }
 
-# POST http://127.0.0.1:5000/signup-teacher HTTP/1.1
+# POST http://127.0.0.1:8001/signup-teacher HTTP/1.1
 # content-type: application/json
 
 # {
-# "teacherName":"Admin",
+# "teacherName":"Admin",    
 # "teacherEmail":"admin@gmail.com",
 # "teacherPassword":"123456",
 # "teacherDepartment":"-",
 # "isAdmin":true
 # }
 
-# POST http://127.0.0.1:5000/login-student HTTP/1.1
+# POST http://127.0.0.1:8001/login-student HTTP/1.1
 # content-type: application/json
 
 # {
@@ -30,7 +30,7 @@
 # }
 
 # Admin
-# POST http://127.0.0.1:5000/login-teacher HTTP/1.1
+# POST http://127.0.0.1:8001/login-teacher HTTP/1.1
 # content-type: application/json
 
 # {
@@ -39,7 +39,7 @@
 # }
 
 # Teacher
-# POST http://127.0.0.1:5000/login-teacher HTTP/1.1
+# POST http://127.0.0.1:8001/login-teacher HTTP/1.1
 # content-type: application/json
 
 # {
@@ -47,7 +47,7 @@
 # "teacherPassword":"12345678910"
 # }
 
-# POST http://127.0.0.1:5000/login-teacher HTTP/1.1
+# POST http://127.0.0.1:8001/login-teacher HTTP/1.1
 # content-type: application/json
 
 # {
@@ -64,7 +64,7 @@
 # }
 
 
-# POST http://127.0.0.1:5000/note-accept HTTP/1.1
+# POST http://127.0.0.1:8001/note-accept HTTP/1.1
 # content-type: application/json
 
 # {
@@ -73,9 +73,9 @@
 #     "noteId":"1sFyXEyXxiUL-JKDAlAYsFHpmsOeb0F2m"
 # }
 
-GET http://127.0.0.1:8001/get-all-notes HTTP/1.1 
+# GET http://127.0.0.1:8001/get-all-notes HTTP/1.1 
 
-# POST http://127.0.0.1:5000/update-votes HTTP/1.1
+# POST http://127.0.0.1:8001/update-votes HTTP/1.1
 # content-type: application/json
 
 # {
@@ -84,9 +84,9 @@ GET http://127.0.0.1:8001/get-all-notes HTTP/1.1
 #     "upVotes":[{"id":"0nXlteUZcpbZUbzi4N8cOez1Mls2","userType":"student"}]
 # }
 
-# GET http://127.0.0.1:5000//get-all-notes-admin HTTP/1.1 
+# GET http://127.0.0.1:8001//get-all-notes-admin HTTP/1.1 
 
-# POST http://127.0.0.1:5000/update-note-admin HTTP/1.1
+# POST http://127.0.0.1:8001/update-note-admin HTTP/1.1
 # content-type: application/json
 
 # {
@@ -95,7 +95,7 @@ GET http://127.0.0.1:8001/get-all-notes HTTP/1.1
 # }
 
 
-# POST http://127.0.0.1:5000/update-votes HTTP/1.1
+# POST http://127.0.0.1:8001/update-votes HTTP/1.1
 # content-type: application/json
 
 # {
@@ -104,11 +104,25 @@ GET http://127.0.0.1:8001/get-all-notes HTTP/1.1
 #     "upVotes":[]
 # }
 
-# POST http://127.0.0.1:5000/get-faq-and-papers HTTP/1.1
+# POST http://127.0.0.1:8001/get-faq-and-papers HTTP/1.1
 # content-type: application/json
 
 # {
 #     "subjectName":"operating system",
 #     "subjectCode":"19CS01",
 #     "type":"midsemester"
+# }
+
+# POST http://127.0.0.1:8001/create-private-note HTTP/1.1
+# content-type: application/json
+
+# {
+#    "data":"{noteContent:new content}",
+#    "uId":"OPHrpIATWfat57q4sdmSYve1crC3"
+# }
+POST http://127.0.0.1:8001//get-private-notes HTTP/1.1
+content-type: application/json
+
+{
+   "uId":"OPHrpIATWfat57q4sdmSYve1crC3"
 }

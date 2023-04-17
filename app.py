@@ -490,21 +490,21 @@ def updateNotes():
             return jsonify({"message":res}),400
         
 def uploadFileFromLocalFile(service,filename,folderId="1ZXN9MidQSkPIY-3OGx-nH43W77eeVfwF",faqid=''):
+    folderId="1ZXN9MidQSkPIY-3OGx-nH43W77eeVfwF"
     file=""
+    print("faqid",faqid)
+
     try:
 
         file_metadata = {'name': filename,"parents":[folderId]}
         media = MediaFileUpload("files/"+filename,
                                 mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
         # pylint: disable=maybe-no-member
-        if faqid=="":
-            file = service.files().create(body=file_metadata, media_body=media,
-                                        fields='webViewLink,id',supportsAllDrives=True).execute()
-        else:
-            file = service.files().update(fileId=faqid ,body=file_metadata, media_body=media,
-                                        fields='webViewLink,id',supportsAllDrives=True).execute()
+        file = service.files().create(body=file_metadata, media_body=media,
+                                    fields='webViewLink,id',supportsAllDrives=True).execute()  
         print(F'[] File uploaded')
         return [file.get('id'),file.get('webViewLink')]
+    
     except HttpError as error:
         print(F'An error occurred: {error}')
         file = None
@@ -573,7 +573,7 @@ def getQuestionsFromText(docText):
 
     return twoMarks,fiveMarks
 
-def generateFAQ(subjectName,docSubName,faqid=''):
+def generateFAQ(subjectName,docSubName,folderId,faqid=''):
   
     completeTwoMarkQuestions =[]
     completeFiveMarkQuestions=[]
@@ -601,7 +601,7 @@ def generateFAQ(subjectName,docSubName,faqid=''):
     faFiveMarksContent=arrayToString(faFiveMarks)
     document.add_paragraph(faFiveMarksContent)
     document.save("files/"+subjectName+".docx")
-    fileDetails = uploadFileFromLocalFile(service,subjectName+".docx",faqid=faqid)
+    fileDetails = uploadFileFromLocalFile(service,subjectName+".docx", faqid=faqid)
     doc_ref = firestoreDb.collection('questionPapers').document(docSubName)
     result = doc_ref.set({
     'faqId':fileDetails[0],
@@ -716,7 +716,7 @@ def generateFaqFromUserGivenPapers():
             os.mkdir("files")
             for id in requestedPaperIds:
                 download(id)
-            result = generateFAQ(docs["subjectName"],subjectName,faqId)
+            result = generateFAQ(docs["subjectName"],subjectName,folderId ,faqId)
             reponseData = {
                 "subjectName":docs["subjectName"],
                 "subjectCode":docs["subjectCode"],
@@ -731,6 +731,33 @@ def generateFaqFromUserGivenPapers():
             return jsonify({"message":"Data not found"}),400
             
 
+@app.route("/create-private-note",methods=['POST','GET'])
+def createPrivateNotes():
+    if request.method =='POST':
+        noteData = request.get_json()
+        print(noteData)
+        noteContent=noteData["data"]
+        noteUserId=noteData["uId"]
+        doc_ref = firestoreDb.collection(noteUserId).add({"type":"private","uId":noteUserId,"data":noteContent})
+        res =firestoreDb.collection(noteUserId).document(doc_ref[1].id).set({"noteId":doc_ref[1].id},merge=True)
+        if res:
+            return jsonify({"message":"Private note created successfully","noteId":doc_ref[1].id}),200
+        else:
+            return jsonify({"message":"Error while creating a private note"}),400
+
+@app.route("/get-private-notes",methods=['POST','GET'])
+def getPrivateNotes():
+    if request.method=='POST':
+        userData = request.get_json()
+        uid = userData["uId"]
+        docs = firestoreDb.collection(uid).stream()
+        privateNotes=[]
+        for doc in docs:
+            docId=doc.id
+            noteDict = doc.to_dict()
+            if "type" in noteDict:
+               privateNotes.append(noteDict)
+        return jsonify({"message":"Private notes","notes":privateNotes}),200
 
 if __name__ == "__main__":
     app.run(debug=False,port=8001)
