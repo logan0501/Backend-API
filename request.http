@@ -120,9 +120,13 @@
 #    "data":"{noteContent:new content}",
 #    "uId":"OPHrpIATWfat57q4sdmSYve1crC3"
 # }
-POST http://127.0.0.1:8001//get-private-notes HTTP/1.1
-content-type: application/json
+# POST http://127.0.0.1:8001//get-private-notes HTTP/1.1
+# content-type: application/json
 
-{
-   "uId":"OPHrpIATWfat57q4sdmSYve1crC3"
-}
+# {
+#    "uId":"OPHrpIATWfat57q4sdmSYve1crC3"
+# }
+
+GET http://127.0.0.1:8001/get-all-list-of-faqs HTTP/1.1 
+
+

@@ -759,8 +759,19 @@ def getPrivateNotes():
                privateNotes.append(noteDict)
         return jsonify({"message":"Private notes","notes":privateNotes}),200
 
+@app.route("/get-all-list-of-faqs",methods=['POST','GET'])
+def getAllListOfFaqs():
+    if request.method=='GET':
+        docs = firestoreDb.collection("questionPapers").stream()
+        faqSubjectNames=[]
+        for doc in docs:
+            subjectDoc = doc.to_dict()
+            if "faqId" in subjectDoc:
+                faqSubjectNames.append(subjectDoc["subjectName"])
+        return jsonify({"message":"List of available faqs","list":faqSubjectNames}),200
+
 if __name__ == "__main__":
     app.run(debug=False,port=8001)
 
 
-# flask run``
+# flask run
