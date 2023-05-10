@@ -1,4 +1,5 @@
 from __future__ import print_function
+import string
 from flask import Flask,jsonify,request
 import firebase_admin
 from firebase_admin import credentials
@@ -31,6 +32,10 @@ import os
 from docx import Document
 import shutil
 import random
+import nltk
+from nltk.corpus import stopwords
+# nltk.download('stopwords')
+stopwords = stopwords.words('english')
 # try:
 #     _create_unverified_https_context = ssl._create_unverified_context
 # except AttributeError:
@@ -490,9 +495,7 @@ def updateNotes():
             return jsonify({"message":res}),400
         
 def uploadFileFromLocalFile(service,filename,folderId="1ZXN9MidQSkPIY-3OGx-nH43W77eeVfwF",faqid=''):
-    folderId="1ZXN9MidQSkPIY-3OGx-nH43W77eeVfwF"
     file=""
-    print("faqid",faqid)
 
     try:
 
@@ -601,7 +604,7 @@ def generateFAQ(subjectName,docSubName,folderId,faqid=''):
     faFiveMarksContent=arrayToString(faFiveMarks)
     document.add_paragraph(faFiveMarksContent)
     document.save("files/"+subjectName+".docx")
-    fileDetails = uploadFileFromLocalFile(service,subjectName+".docx", faqid=faqid)
+    fileDetails = uploadFileFromLocalFile(service=service,filename=subjectName+".docx", faqid=faqid)
     doc_ref = firestoreDb.collection('questionPapers').document(docSubName)
     result = doc_ref.set({
     'faqId':fileDetails[0],
@@ -770,6 +773,119 @@ def getAllListOfFaqs():
                 faqSubjectNames.append(subjectDoc["subjectName"])
         return jsonify({"message":"List of available faqs","list":faqSubjectNames}),200
 
+def generateCoursePlan(subjectName,fileId,originalSubjectName):        
+    docContent = docx2txt.process("files/"+fileId+".docx")
+    docContent = docContent.split("\n")
+    questions=[]
+    for sentence in docContent:
+        newSentence = sentence.strip()
+        if len(newSentence)>0 and newSentence[0].isdigit() and newSentence.lower() != '2 marks' and newSentence.lower()!='11 marks':
+            newSentence = newSentence[newSentence.find(".",0,3)+2:]
+            questions.append(newSentence)            
+    coursePlanContent = docx2txt.process("files/"+subjectName+"CoursePlan.docx")
+    coursePlanContent = coursePlanContent.split("\n")
+    coursePlanTopics = []
+    for topic in coursePlanContent:
+        if len(topic.strip()) > 0 and "course plan" not in topic.lower():
+            coursePlanTopics.append(topic)
+    def clean_string(text):
+
+        text = "".join([word for word in text if word not in string.punctuation])
+        text = text.lower()
+        return text
+    cleanedSentences = list(map(clean_string,questions))
+    cleanedPhrases = list(map(clean_string,coursePlanTopics))
+    importantTopics = set()
+    notFoundQuestions = []
+
+
+    def check_common_phrases(sentence1, sentence2):
+        # Tokenize the sentences into words or phrases
+        words1 = set(sentence1.lower().split())
+        words2 = set(sentence2.lower().split())
+        # Find the intersection of the sets
+        common_phrases = words1.intersection(words2)
+        score=0
+        for phrase in common_phrases:
+            if phrase not in stopwords:
+                score+=1  
+            if score>=2:
+                return [sentence2,score,sentence1]
+        return [-1,-1,-1]
+
+    coursePlan = dict()
+    questions = set()
+
+    for sentence in cleanedSentences:
+        for phrase in cleanedPhrases:
+            topic, score,question = check_common_phrases(sentence,phrase)
+            if topic !=-1:
+                questions.add(question)
+                if topic in coursePlan:
+                    if coursePlan[topic]<score:
+                        coursePlan[topic]=score
+                else:
+                    coursePlan[topic]=score
+
+    importantTopics = list(coursePlan.keys())
+    importantTopics = sorted(importantTopics)
+    notFoundQuestions = list(set(cleanedSentences)-questions)
+    document = Document()
+    document.add_heading(originalSubjectName+" important topics")
+    def courseDisplayHelper(arr):
+        string=''
+        for i in range(len(arr)):
+            string+=arr[i][0]+". "+arr[i][2:].capitalize()+"\n"
+        return string
+    importantTopicsText=courseDisplayHelper(list(importantTopics))
+    document.add_paragraph(importantTopicsText)
+    def arrayToString(arr):
+        string=''
+        for i in range(len(arr)):
+            string+=str(i+1)+". "+arr[i].capitalize()+"\n"
+        return string
+    document.add_paragraph('Additional Questions not found in course plan')
+    notFoundQuestionsContent=arrayToString(notFoundQuestions)
+    document.add_paragraph(notFoundQuestionsContent)
+    document.save("files/"+subjectName+".docx")
+    fileDetails = uploadFileFromLocalFile(service,subjectName+".docx",folderId='1uUXRF5oHe6IbOSxnLy45p4yIZmvw3rqb')
+    doc_ref = firestoreDb.collection('questionPapers').document(subjectName)
+    res = doc_ref.set({
+    'importantTopicsFileId':fileDetails[0],
+    'importantTopicFileLink':fileDetails[1],
+}, merge=True)
+    shutil.rmtree('files')
+    print(res)
+    if "update_time" in res:
+        print("File uploaded successfully")
+        return jsonify({"message":"File uploaded successfully",'link':fileDetails[1]}),200
+    else:
+        return jsonify({"message":"Error while uploading file"}),400
+
+@app.route("/generate-and-get-course-plan",methods=['POST','GET'])
+def generateAndGetCoursePlan():
+    if request.method=='POST':
+        file = request.files['file']
+        uploaddata = json.loads(request.form['data'])
+        originalSubjectName = uploaddata["subjectName"]
+        subjectName = originalSubjectName.replace(" ","").lower()
+        doc_ref = firestoreDb.collection('questionPapers').document(subjectName)
+        if not doc_ref.get().exists:
+            return jsonify({"message":"Subject doesn't exist"}),400
+        else:
+            docDict = doc_ref.get().to_dict()
+            
+            if "importantTopicFileLink" in docDict:
+                return jsonify({"message":"File found already",'link':docDict["importantTopicFileLink"]}),200
+            else:
+                doc = firestoreDb.collection('questionPapers').document(subjectName).get().to_dict()
+                faqFileId = doc["faqId"]
+                os.mkdir("files")
+                download(faqFileId)
+                file.save("files/"+subjectName+"CoursePlan.docx")
+                return generateCoursePlan(subjectName,faqFileId,originalSubjectName)
+
+# shutil.rmtree('files')
 if __name__ == "__main__":
     app.run(debug=False,port=8001)
 
